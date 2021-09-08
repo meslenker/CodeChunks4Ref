@@ -1,0 +1,91 @@
+/*Originally I used a process that would check if a trigger was set and fail the refresh by using the SQL statement "Select 1 from notable" if the trigger wasn't set.
+The refresh would run every 10 mins, which meant this refresh had a failure wait of about 90%. In order to get more accurate statistics for the job, I opted to 
+move to a Do loop option. The job that creates the trigger runs 5 times a day, so I scheduled my QlikSense refresh loop to start around the average end time of 
+each of those job runs.*/
+
+LIB CONNECT TO 'Production Connection';
+
+ 
+
+LET vFinish = null();
+
+ 
+
+LET vSucceed = 1;
+
+ 
+
+ 
+
+// Start loop script that will continue until condition is met.
+
+Do until vFinish=vSucceed
+
+
+Trigger:
+
+LOAD
+
+SOME_IND
+
+;
+
+ 
+//I could do any action at this point, but I needed it to look for a Trigger in a column
+SELECT SOME_IND
+
+FROM LOAD_COMPLETE;
+
+ 
+
+//set the column value to a QS variable
+
+LET vFinish =  PEEK('SOME_IND',-1,'Trigger');;
+
+ 
+
+Trace Finish: $(vFinish);
+
+ 
+
+// where condition is met, exit and complete.
+
+ 
+
+if vFinish=vSucceed then
+
+ 
+
+  Exit Do
+
+ 
+
+// where condition is not met, drop that table ready to restart the load process.
+
+ 
+
+else
+
+ 
+
+DROP TABLE Trigger;
+
+ 
+
+// Sleep for 1 minute (60,000 miliseconds)
+
+ 
+
+Sleep 60000; 
+
+ 
+
+end if
+
+ 
+
+// where condition is not met then restart loop.
+
+ 
+
+loop
